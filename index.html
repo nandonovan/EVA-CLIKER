@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>EVA: After-H Clicker — Prototype + Monde</title>
+<style>
+  :root { --bg:#0c0f14; --panel:#121722; --text:#e7ecf3; --muted:#96a2b2; --accent:#68e1fd; --good:#8df7a3; --warn:#ffd166; --bad:#ff7b7b; }
+  * { box-sizing:border-box; font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, sans-serif; }
+  body { margin:0; background:linear-gradient(180deg,#0c0f14,#0b0d12); color:var(--text); }
+  header { padding:12px 16px; background:#0b1018; position:sticky; top:0; z-index:5; box-shadow:0 2px 12px #0008; }
+  header h1 { margin:0; font-size:18px; letter-spacing:0.5px; }
+  nav.tabs { display:flex; gap:8px; padding:10px 12px; background:#0b1018; border-top:1px solid #111827; }
+  .tab { padding:8px 12px; border-radius:10px; border:1px solid #253147; background:#141b2a; cursor:pointer; color:var(--text); }
+  .tab.active { background:#1b2438; box-shadow:0 0 0 2px #253147 inset; }
+  main { padding:12px; }
+  .page { display:none; }
+  .page.active { display:block; }
+  .layout { display:grid; grid-template-columns: 1fr 360px; gap:12px; }
+  @media (max-width: 900px){ .layout { grid-template-columns: 1fr; } }
+  .card { background:var(--panel); border:1px solid #1b2333; border-radius:14px; padding:12px; box-shadow:0 8px 24px #0006; }
+  .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .btn { background:#1a2333; color:var(--text); border:1px solid #253147; padding:10px 12px; border-radius:10px; cursor:pointer; user-select:none; }
+  .btn:hover { filter:brightness(1.1); }
+  .stat { padding:6px 10px; border-radius:8px; background:#0f1420; border:1px solid #1c2840; font-variant-numeric:tabular-nums; }
+  .bigclick { display:flex; align-items:center; justify-content:center; aspect-ratio:1/1; width:100%; border-radius:16px; border:2px dashed #2b3756; background:radial-gradient( circle at 50% 45%, #182235, #121722 ); cursor:pointer; user-select:none; font-weight:700; font-size:22px; }
+  .bigclick:hover{ background:radial-gradient( circle at 50% 45%, #1b2742, #121722 ); }
+  .pill { padding:4px 8px; border-radius:999px; border:1px solid #2a3652; background:#0e1422; font-size:12px; color:var(--muted); }
+  .grid { display:grid; grid-template-columns: repeat(2, 1fr); gap:10px; }
+  .section-title { font-weight:700; margin:6px 0 8px; opacity:.9; }
+  .tiny { font-size:12px; color:var(--muted); }
+  .rar-C{ background:#2a2a2a; } .rar-UC{ background:#1d3a25; } .rar-R{ background:#14344f; }
+  .rar-E{ background:#2b1547; } .rar-L{ background:#4a2c0d; } .rar-H{ background:linear-gradient(90deg,#3b1a7a,#31587c,#2a7d6b,#4a2c0d); }
+  .log { height:140px; overflow:auto; font-size:12px; background:#0e1220; border:1px solid #202b44; padding:8px; border-radius:10px; }
+
+  /* Monde */
+  .world { display:grid; grid-template-columns: 1fr 360px; gap:12px; }
+  @media (max-width: 900px){ .world { grid-template-columns: 1fr; } }
+  .map { height: 440px; border-radius:14px; overflow:hidden; border:1px solid #1b2333; background: radial-gradient(1200px 400px at 20% 20%, #11192a, #0f1523 60%, #0c101b 100%); position:relative; }
+  .biome-card { background:#10182a; border:1px solid #1c2840; border-radius:12px; padding:10px; display:flex; justify-content:space-between; align-items:center; }
+  .biome-card.locked { opacity:.5; }
+  .biome-list { display:grid; grid-template-columns: 1fr; gap:8px; }
+  .node { position:absolute; width:20px; height:20px; border-radius:999px; border:2px solid #263657; background:#0e1422; transform:translate(-50%, -50%); display:flex; align-items:center; justify-content:center; font-size:11px; }
+  .node.unlocked { background:#1e2a44; }
+  .node.current { background:#284a7a; border-color:#68e1fd; box-shadow:0 0 0 4px #68e1fd22; }
+  .node.done { background:#1f5a3a; border-color:#8df7a3; }
+  .path { position:absolute; left:0; top:0; right:0; bottom:0; pointer-events:none; }
+  .progressbar { height:8px; background:#0e1422; border:1px solid #1c2840; border-radius:999px; overflow:hidden; }
+  .progressbar > div { height:100%; background:linear-gradient(90deg, #68e1fd, #8df7a3); width:0%; }
+</style>
+</head>
+<body>
+  <header>
+    <h1>EVA: After-H Clicker — Prototype (offline) + Carte du Monde</h1>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="farm">Farm</button>
+    <button class="tab" data-tab="world">Monde</button>
+  </nav>
+
+  <main>
+    <!-- PAGE FARM -->
+    <section class="page active" id="page-farm">
+      <div class="layout">
+        <section class="card">
+          <div class="row" style="justify-content:space-between; margin-bottom:8px;">
+            <div class="row" style="gap:6px;">
+              <span class="stat">Énergie: <b id="energy">0</b></span>
+              <span class="stat">Crédits: <b id="credits">0</b></span>
+              <span class="stat">Evacoins: <b id="evacoins">0</b></span>
+              <span class="stat">Points: <b id="points">0</b></span>
+              <span class="stat">Prestige x<b id="prestigeMult">1.00</b></span>
+            </div>
+            <span class="pill">Zone <b id="zone">1</b></span>
+          </div>
+
+          <div id="clickBtn" class="bigclick">CLIQUE POUR COLLECTER</div>
+          <div class="row" style="margin-top:10px; gap:10px;">
+            <button class="btn" id="sellEnergy">Vendre 100 Énergie → 100 Crédits</button>
+            <button class="btn" id="exchangeEvacoins">Échanger 1 Evacoin → 10 Points</button>
+            <button class="btn" id="buyEvacoins">Récompense: +5 Evacoins</button>
+          </div>
+
+          <h3 class="section-title">Progression</h3>
+          <div class="grid">
+            <button class="btn" id="upgradeClick">Améliorer Clic (coût: <span id="upgradeCost">50</span> Crédits)</button>
+            <button class="btn" id="nextZone">Passer Zone (coût: <span id="zoneCost">150</span> Crédits)</button>
+          </div>
+
+          <h3 class="section-title">Packs & Tirages</h3>
+          <div class="grid">
+            <button class="btn" id="buyStandard">Pack Standard (100 Points)</button>
+            <button class="btn" id="buyPremium">Pack Premium (250 Points)</button>
+          </div>
+          <div class="tiny">Raretés: <span class="pill rar-C">C</span> <span class="pill rar-UC">UC</span> <span class="pill rar-R">R</span> <span class="pill rar-E">E</span> <span class="pill rar-L">L</span> <span class="pill rar-H">H</span></div>
+
+          <h3 class="section-title">Prestige</h3>
+          <div class="row">
+            <button class="btn" id="doPrestige">Prestige (reset progression → multiplier permanent)</button>
+            <span class="tiny">Conseil: essaye après la Zone 30+ pour bien sentir l'effet.</span>
+          </div>
+
+          <h3 class="section-title">Journal</h3>
+          <div id="log" class="log"></div>
+        </section>
+
+        <aside class="card">
+          <h3 style="margin-top:0">Inventaire</h3>
+          <div class="tiny">Derniers tirages</div>
+          <ul id="inventory"></ul>
+          <hr style="border-color:#1e2940" />
+          <h3>Stats compte</h3>
+          <div class="tiny" id="accountStats"></div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- PAGE MONDE -->
+    <section class="page" id="page-world">
+      <div class="world">
+        <section class="card">
+          <div class="row" style="justify-content:space-between; margin-bottom:8px;">
+            <h3 style="margin:0">Carte du Monde</h3>
+            <div class="stat">Zone actuelle: <b id="worldZone">1</b> / 100</div>
+          </div>
+          <div class="progressbar" title="Progression globale">
+            <div id="globalProgress" style="width:0%"></div>
+          </div>
+
+          <div class="map" id="map">
+            <svg class="path" viewBox="0 0 1000 440" preserveAspectRatio="none">
+              <!-- chemin visuel serpentin -->
+              <polyline id="route"
+                points="40,360 140,300 240,340 340,280 440,320 540,260 640,300 740,240 840,280 940,220"
+                fill="none" stroke="#2a3a5a" stroke-width="3" stroke-linecap="round" stroke-dasharray="6 6"/>
+            </svg>
+            <!-- Les 10 noeuds biomes seront posés en JS sur la route -->
+          </div>
+        </section>
+
+        <aside class="card">
+          <h3 style="margin-top:0">Biomes</h3>
+          <div class="biome-list" id="biomeList"></div>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+<script>
+(function(){
+  const $ = sel => document.querySelector(sel);
+  const log = msg => { const el = document.createElement('div'); el.textContent = `• ${msg}`; $('#log').prepend(el); };
+
+  const state = {
+    energy: 0, credits: 0, evacoins: 0, points: 0,
+    zone: 1, clickLevel: 1, prestigeMult: 1,
+    totalSpentPoints: 0, pityLegendary: 0, pityHolo: 0,
+    inventory: [],
+    // Monde
+    biomes: [
+      {id:1, name:'Laboratoire (Scientifiques)', start:1, end:10},
+      {id:2, name:'Jungle', start:11, end:20},
+      {id:3, name:'Far-West (Cowboys)', start:21, end:30},
+      {id:4, name:'Toundra (Enneigés)', start:31, end:40},
+      {id:5, name:'Ruines d’Artefacts', start:41, end:50},
+      {id:6, name:'Méga-Lab', start:51, end:60},
+      {id:7, name:'Jungle Nocturne', start:61, end:70},
+      {id:8, name:'Canyon Rouge', start:71, end:80},
+      {id:9, name:'Banquise', start:81, end:90},
+      {id:10, name:'Nexus d’Artefacts', start:91, end:100},
+    ]
+  };
+
+  // helpers
+  const fmt = n => Math.floor(n).toLocaleString('fr-FR');
+  function save(){ localStorage.setItem('eva_clicker_proto_v2', JSON.stringify(state)); }
+  function load(){ try { Object.assign(state, JSON.parse(localStorage.getItem('eva_clicker_proto_v2')||'{}')); } catch{} }
+
+  function zoneCost(L){ return 150 * Math.pow(L, 1.35); }
+  function clickBase(L){ return 1.0 * Math.pow(L, 0.9); }
+  function upgradeCost(lvl){ return 50 * Math.pow(lvl, 1.15); }
+
+  // UI refresh (Farm)
+  function refreshFarm(){
+    $('#energy').textContent = fmt(state.energy);
+    $('#credits').textContent = fmt(state.credits);
+    $('#evacoins').textContent = fmt(state.evacoins);
+    $('#points').textContent = fmt(state.points);
+    $('#zone').textContent = state.zone;
+    $('#prestigeMult').textContent = state.prestigeMult.toFixed(2);
+    $('#zoneCost').textContent = fmt(zoneCost(state.zone));
+    $('#upgradeCost').textContent = fmt(upgradeCost(state.clickLevel));
+    $('#accountStats').innerHTML = `Niveau de clic: <b>${state.clickLevel}</b><br/>Points dépensés: <b>${fmt(state.totalSpentPoints)}</b><br/>Pity L: <b>${state.pityLegendary}</b> — Pity H: <b>${state.pityHolo}</b>`;
+    const inv = $('#inventory');
+    inv.innerHTML = '';
+    state.inventory.slice(-15).reverse().forEach(it=>{
+      const li = document.createElement('li');
+      li.textContent = `${it.type} — ${it.rarity}`;
+      li.className = `pill rar-${it.rarityCode}`;
+      inv.appendChild(li);
+    });
+  }
+
+  // WORLD MAP
+  function biomeForZone(z){
+    return state.biomes.find(b => z >= b.start && z <= b.end) || state.biomes[state.biomes.length-1];
+  }
+  function worldProgress(){
+    const z = Math.min(state.zone, 100);
+    const pct = (z/100)*100;
+    $('#worldZone').textContent = z;
+    $('#globalProgress').style.width = pct+'%';
+    // Liste biomes
+    const bl = $('#biomeList');
+    bl.innerHTML = '';
+    state.biomes.forEach((b,i)=>{
+      const completed = Math.max(0, Math.min(z, b.end)) - b.start + 1;
+      const total = b.end - b.start + 1;
+      const done = completed > total ? total : Math.max(0, completed);
+      const locked = z < b.start;
+      const card = document.createElement('div');
+      card.className = 'biome-card' + (locked ? ' locked':'');
+      const left = document.createElement('div');
+      left.innerHTML = `<div style="font-weight:700">${b.name}</div><div class="tiny">Zones ${b.start}–${b.end}</div>`;
+      const right = document.createElement('div');
+      right.style.minWidth='120px';
+      right.innerHTML = `<div class="progressbar" style="width:120px"><div style="width:${(done/total)*100}%"></div></div><div class="tiny" style="text-align:right;margin-top:4px">${done}/${total}</div>`;
+      card.appendChild(left); card.appendChild(right);
+      bl.appendChild(card);
+    });
+
+    // Noeuds sur la route
+    const map = $('#map');
+    // nettoyer anciens nodes
+    Array.from(map.querySelectorAll('.node')).forEach(n=>n.remove());
+    const points = [
+      {x:40,y:360},{x:140,y:300},{x:240,y:340},{x:340,y:280},{x:440,y:320},
+      {x:540,y:260},{x:640,y:300},{x:740,y:240},{x:840,y:280},{x:940,y:220}
+    ];
+    state.biomes.forEach((b,i)=>{
+      const p = points[i];
+      const node = document.createElement('div');
+      node.className = 'node';
+      node.style.left = p.x+'px';
+      node.style.top = p.y+'px';
+      node.title = `${b.name} — Zones ${b.start}–${b.end}`;
+      const status = z >= b.end ? 'done' : (z >= b.start ? 'current' : 'locked');
+      node.classList.add(status==='done' ? 'done' : (status==='current' ? 'current' : ''));
+      if(status!=='locked') node.classList.add('unlocked');
+      node.textContent = b.id;
+      map.appendChild(node);
+    });
+  }
+
+  // Game logic
+  function addEnergy(){
+    const gain = (clickBase(state.zone) * (1 + state.clickLevel*0.15)) * state.prestigeMult;
+    state.energy += gain;
+    $('#energy').textContent = fmt(state.energy);
+  }
+  function buyPack(kind){
+    const cost = (kind==='standard') ? 100 : 250;
+    if(state.points < cost) { log(`Pas assez de Points pour le pack ${kind}.`); return; }
+    state.points -= cost; state.totalSpentPoints += cost;
+    const pulls = (kind==='standard') ? 5 : 7;
+    const results = [];
+    for(let i=0;i<pulls;i++){ results.push(rollCard(kind)); }
+    log(`Pack ${kind} → ${results.map(r=>r.rarity).join(', ')}`);
+    refreshFarm(); save(); worldProgress();
+  }
+  function rollCard(kind){
+    let odds = { C:0.60, UC:0.25, R:0.10, E:0.04, L:0.01, H:0.001 };
+    if(kind==='premium'){ odds = { C:0.00, UC:0.00, R:0.45, E:0.35, L:0.18, H:0.02 }; }
+    state.pityLegendary++; state.pityHolo++;
+    let bonusL = (state.pityLegendary>=49) ? 0.50 : 0;
+    let bonusH = (state.pityHolo>=199) ? 0.05 : 0;
+    odds.L += bonusL; odds.H += bonusH;
+    const total = Object.values(odds).reduce((a,b)=>a+b,0);
+    let r = Math.random()*total, acc=0, code='C';
+    for(const [k,v] of Object.entries(odds)){ acc+=v; if(r<=acc){ code=k; break; } }
+    if(code==='L') state.pityLegendary = 0;
+    if(code==='H') state.pityHolo = 0;
+    const rarityName = {C:'Commun',UC:'Peu commun',R:'Rare',E:'Épique',L:'Légendaire',H:'Holographique'}[code];
+    const item = { type: (Math.random()<0.6? 'Héros':'Consommable'), rarity: rarityName, rarityCode: code };
+    state.inventory.push(item); if(state.inventory.length>200) state.inventory.shift();
+    return item;
+  }
+  function prestige(){
+    const mp = Math.floor(Math.pow((state.totalSpentPoints/1_000_000), 0.6));
+    const addMult = 1 + mp * 0.15;
+    if(mp<=0){ log('Pas assez de tirages pour un bonus de Prestige visible.'); return; }
+    state.prestigeMult = parseFloat((state.prestigeMult * addMult).toFixed(2));
+    state.energy = 0; state.credits = 0; state.points = 0; state.zone = 1; state.clickLevel = 1;
+    state.pityLegendary = 0; state.pityHolo = 0;
+    log(`Prestige ! Nouveau multiplicateur permanent x${state.prestigeMult.toFixed(2)}.`);
+    refreshFarm(); save(); worldProgress();
+  }
+
+  // Bindings
+  $('#clickBtn').addEventListener('click', addEnergy);
+  $('#sellEnergy').addEventListener('click', ()=>{ if(state.energy>=100){ state.energy-=100; state.credits+=100; refreshFarm(); save(); }});
+  $('#exchangeEvacoins').addEventListener('click', ()=>{ if(state.evacoins>=1){ state.evacoins-=1; state.points+=10; refreshFarm(); save(); }});
+  $('#buyEvacoins').addEventListener('click', ()=>{ state.evacoins+=5; log('+5 Evacoins (récompense démo)'); refreshFarm(); save(); });
+  $('#upgradeClick').addEventListener('click', ()=>{ const c=upgradeCost(state.clickLevel); if(state.credits>=c){ state.credits-=c; state.clickLevel++; refreshFarm(); save(); }});
+  $('#nextZone').addEventListener('click', ()=>{ const c=zoneCost(state.zone); if(state.credits>=c){ state.credits-=c; state.zone++; log(`Zone ${state.zone} atteinte (${biomeForZone(state.zone).name}).`); refreshFarm(); save(); worldProgress(); }});
+  $('#buyStandard').addEventListener('click', ()=> buyPack('standard'));
+  $('#buyPremium').addEventListener('click', ()=> buyPack('premium'));
+  $('#doPrestige').addEventListener('click', prestige);
+
+  // Tabs
+  document.querySelectorAll('.tab').forEach(t=>{
+    t.addEventListener('click', ()=>{
+      document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+      t.classList.add('active');
+      const name = t.dataset.tab;
+      document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+      $('#page-'+name).classList.add('active');
+      // sync monde à l’ouverture
+      if(name==='world'){ worldProgress(); }
+    });
+  });
+
+  // init
+  load(); refreshFarm(); worldProgress();
+  log('Bienvenue ! Clique pour collecter, vends pour des crédits, échange Evacoins → Points, achète des packs, avance de zone, et regarde la progression sur la carte du Monde.');
+})();
+</script>
+</body>
+</html>
+
