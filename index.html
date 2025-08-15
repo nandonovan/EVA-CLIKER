@@ -23,8 +23,10 @@
   .btn { background:#1a2333; color:var(--text); border:1px solid #253147; padding:10px 12px; border-radius:10px; cursor:pointer; user-select:none; }
   .btn:hover { filter:brightness(1.1); }
   .stat { padding:6px 10px; border-radius:8px; background:#0f1420; border:1px solid #1c2840; font-variant-numeric:tabular-nums; }
-  .bigclick { display:flex; align-items:center; justify-content:center; aspect-ratio:1/1; width:100%; border-radius:16px; border:2px dashed #2b3756; background:radial-gradient( circle at 50% 45%, #182235, #121722 ); cursor:pointer; user-select:none; font-weight:700; font-size:22px; }
-  .bigclick:hover{ background:radial-gradient( circle at 50% 45%, #1b2742, #121722 ); }
+  .bigclick { position:relative; overflow:hidden; display:flex; align-items:center; justify-content:center; aspect-ratio:1/1; width:100%; border-radius:16px; border:2px dashed #2b3756; background:#121722; cursor:pointer; user-select:none; font-weight:700; font-size:22px; }
+  .bigclick:hover{ background:#1b2742; }
+  .bigclick canvas { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+  .bigclick span { position:relative; z-index:1; }
   .pill { padding:4px 8px; border-radius:999px; border:1px solid #2a3652; background:#0e1422; font-size:12px; color:var(--muted); }
   .grid { display:grid; grid-template-columns: repeat(2, 1fr); gap:10px; }
   .section-title { font-weight:700; margin:6px 0 8px; opacity:.9; }
@@ -75,7 +77,10 @@
             <span class="pill">Zone <b id="zone">1</b></span>
           </div>
 
-          <div id="clickBtn" class="bigclick">CLIQUE POUR COLLECTER</div>
+          <div id="clickBtn" class="bigclick">
+            <canvas id="clickBg"></canvas>
+            <span>CLIQUE POUR COLLECTER</span>
+          </div>
           <div class="row" style="margin-top:10px; gap:10px;">
             <button class="btn" id="sellEnergy">Vendre 100 Énergie → 100 Crédits</button>
             <button class="btn" id="exchangeEvacoins">Échanger 1 Evacoin → 10 Points</button>
@@ -151,6 +156,58 @@
 (function(){
   const $ = sel => document.querySelector(sel);
   const log = msg => { const el = document.createElement('div'); el.textContent = `• ${msg}`; $('#log').prepend(el); };
+
+  // Fond animé de la zone de clic
+  const clickBg = document.getElementById('clickBg');
+  const clickCtx = clickBg.getContext('2d');
+  let cbW = 0, cbH = 0, birds = [];
+
+  function resizeClickBg(){
+    cbW = clickBg.width = clickBg.offsetWidth;
+    cbH = clickBg.height = clickBg.offsetHeight;
+  }
+  window.addEventListener('resize', resizeClickBg);
+  resizeClickBg();
+
+  function spawnBird(){
+    birds.push({x:-20, y: cbH*0.2 + Math.random()*cbH*0.2, speed:0.3 + Math.random()*0.7});
+  }
+  setInterval(spawnBird, 3000);
+  spawnBird();
+
+  function drawClickBg(){
+    const g = clickCtx.createLinearGradient(0,0,0,cbH);
+    g.addColorStop(0,'#6c746b');
+    g.addColorStop(1,'#2e3030');
+    clickCtx.fillStyle = g;
+    clickCtx.fillRect(0,0,cbW,cbH);
+
+    clickCtx.fillStyle = '#3b3d3f';
+    clickCtx.fillRect(0, cbH*0.75, cbW, cbH*0.25);
+
+    clickCtx.fillStyle = '#45494e';
+    for(let i=0;i<cbW;i+=80){
+      clickCtx.fillRect(i, cbH*0.55, 40, cbH*0.2);
+    }
+
+    clickCtx.fillStyle = '#355b35';
+    clickCtx.fillRect(cbW*0.15, cbH*0.55, 14, 50);
+    clickCtx.beginPath();
+    clickCtx.fillStyle = '#447c44';
+    clickCtx.arc(cbW*0.15+7, cbH*0.55, 30, 0, Math.PI*2);
+    clickCtx.fill();
+
+    clickCtx.fillStyle = '#ffd166';
+    birds.forEach(b=>{ clickCtx.fillRect(b.x, b.y, 12, 4); b.x += b.speed; });
+    birds = birds.filter(b=> b.x < cbW+20);
+  }
+
+  function animateClickBg(){
+    clickCtx.clearRect(0,0,cbW,cbH);
+    drawClickBg();
+    requestAnimationFrame(animateClickBg);
+  }
+  animateClickBg();
 
   const state = {
     energy: 0, credits: 0, evacoins: 0, points: 0,
