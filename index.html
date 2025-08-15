@@ -92,6 +92,7 @@
           <div class="grid">
             <button class="btn" id="buyStandard">Pack Standard (100 Points)</button>
             <button class="btn" id="buyPremium">Pack Premium (250 Points)</button>
+            <button class="btn" id="buyWeaponPack">Pack Armes (150 Points)</button>
           </div>
           <div class="tiny">Raretés: <span class="pill rar-C">C</span> <span class="pill rar-UC">UC</span> <span class="pill rar-R">R</span> <span class="pill rar-E">E</span> <span class="pill rar-L">L</span> <span class="pill rar-H">H</span></div>
 
@@ -157,6 +158,18 @@
     zone: 1, clickLevel: 1, prestigeMult: 1,
     totalSpentPoints: 0, pityLegendary: 0, pityHolo: 0,
     inventory: [],
+    weapons: [
+      {name:'Dague', power:10},
+      {name:'Pistolet', power:20},
+      {name:'Fusil', power:30},
+      {name:'Katana', power:40},
+      {name:'Arc', power:50},
+      {name:'Lance', power:60},
+      {name:'Marteau', power:70},
+      {name:'Sniper', power:80},
+      {name:'Lame Énergétique', power:90},
+      {name:'Canon à Particules', power:100}
+    ],
     // Monde
     biomes: [
       {id:1, name:'Laboratoire (Scientifiques)', start:1, end:10},
@@ -196,7 +209,9 @@
     inv.innerHTML = '';
     state.inventory.slice(-15).reverse().forEach(it=>{
       const li = document.createElement('li');
-      li.textContent = `${it.type} — ${it.rarity}`;
+      li.textContent = it.type==='Arme'
+        ? `${it.name} (Puissance ${it.power}) — ${it.rarity}`
+        : `${it.type} — ${it.rarity}`;
       li.className = `pill rar-${it.rarityCode}`;
       inv.appendChild(li);
     });
@@ -269,6 +284,14 @@
     log(`Pack ${kind} → ${results.map(r=>r.rarity).join(', ')}`);
     refreshFarm(); save(); worldProgress();
   }
+  function buyWeaponPack(){
+    const cost = 150;
+    if(state.points < cost){ log('Pas assez de Points pour le pack d\'Armes.'); return; }
+    state.points -= cost; state.totalSpentPoints += cost;
+    const item = rollWeapon();
+    log(`Pack Armes → ${item.name} (${item.rarity})`);
+    refreshFarm(); save(); worldProgress();
+  }
   function rollCard(kind){
     let odds = { C:0.60, UC:0.25, R:0.10, E:0.04, L:0.01, H:0.001 };
     if(kind==='premium'){ odds = { C:0.00, UC:0.00, R:0.45, E:0.35, L:0.18, H:0.02 }; }
@@ -283,6 +306,16 @@
     if(code==='H') state.pityHolo = 0;
     const rarityName = {C:'Commun',UC:'Peu commun',R:'Rare',E:'Épique',L:'Légendaire',H:'Holographique'}[code];
     const item = { type: (Math.random()<0.6? 'Héros':'Consommable'), rarity: rarityName, rarityCode: code };
+    state.inventory.push(item); if(state.inventory.length>200) state.inventory.shift();
+    return item;
+  }
+  function rollWeapon(){
+    const weapon = state.weapons[Math.floor(Math.random()*state.weapons.length)];
+    const rarities = ['C','UC','R','E','L','H'];
+    const code = rarities[Math.floor(Math.random()*rarities.length)];
+    const rarityName = {C:'Commun',UC:'Peu commun',R:'Rare',E:'Épique',L:'Légendaire',H:'Holographique'}[code];
+    const mult = {C:1, UC:1.2, R:1.5, E:2, L:3, H:5}[code];
+    const item = { type:'Arme', name:weapon.name, power: Math.round(weapon.power * mult), rarity: rarityName, rarityCode: code };
     state.inventory.push(item); if(state.inventory.length>200) state.inventory.shift();
     return item;
   }
@@ -306,6 +339,7 @@
   $('#nextZone').addEventListener('click', ()=>{ const c=zoneCost(state.zone); if(state.credits>=c){ state.credits-=c; state.zone++; log(`Zone ${state.zone} atteinte (${biomeForZone(state.zone).name}).`); refreshFarm(); save(); worldProgress(); }});
   $('#buyStandard').addEventListener('click', ()=> buyPack('standard'));
   $('#buyPremium').addEventListener('click', ()=> buyPack('premium'));
+  $('#buyWeaponPack').addEventListener('click', buyWeaponPack);
   $('#doPrestige').addEventListener('click', prestige);
 
   // Tabs
