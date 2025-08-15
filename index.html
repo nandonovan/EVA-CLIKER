@@ -106,7 +106,11 @@
         </section>
 
         <aside class="card">
-          <h3 style="margin-top:0">Inventaire</h3>
+          <h3 style="margin-top:0">Héros</h3>
+          <div class="tiny">Recrute et améliore les personnages</div>
+          <div id="heroes"></div>
+          <hr style="border-color:#1e2940" />
+          <h3>Inventaire</h3>
           <div class="tiny">Derniers tirages</div>
           <ul id="inventory"></ul>
           <hr style="border-color:#1e2940" />
@@ -152,11 +156,20 @@
   const $ = sel => document.querySelector(sel);
   const log = msg => { const el = document.createElement('div'); el.textContent = `• ${msg}`; $('#log').prepend(el); };
 
+  const heroes = Array.from({length:52}, (_,i)=>({
+    id: i+1,
+    name: `Personnage ${i+1}`,
+    level: 0,
+    baseCost: 25 * Math.pow(1.55, i),
+    baseDamage: 5 * Math.pow(1.4, i)
+  }));
+
   const state = {
     energy: 0, credits: 0, evacoins: 0, points: 0,
     zone: 1, clickLevel: 1, prestigeMult: 1,
     totalSpentPoints: 0, pityLegendary: 0, pityHolo: 0,
     inventory: [],
+    heroes,
     // Monde
     biomes: [
       {id:1, name:'Laboratoire (Scientifiques)', start:1, end:10},
@@ -180,6 +193,7 @@
   function zoneCost(L){ return 150 * Math.pow(L, 1.35); }
   function clickBase(L){ return 1.0 * Math.pow(L, 0.9); }
   function upgradeCost(lvl){ return 50 * Math.pow(lvl, 1.15); }
+  function heroCost(h){ return Math.floor(h.baseCost * Math.pow(1.15, h.level)); }
 
   // UI refresh (Farm)
   function refreshFarm(){
@@ -199,6 +213,24 @@
       li.textContent = `${it.type} — ${it.rarity}`;
       li.className = `pill rar-${it.rarityCode}`;
       inv.appendChild(li);
+    });
+
+    const hl = $('#heroes');
+    hl.innerHTML = '';
+    state.heroes.forEach(h=>{
+      const row = document.createElement('div');
+      row.className = 'row';
+      row.style.justifyContent = 'space-between';
+      const label = document.createElement('span');
+      label.textContent = `${h.name} (niv ${h.level})`;
+      const btn = document.createElement('button');
+      btn.className = 'btn';
+      const cost = heroCost(h);
+      btn.textContent = h.level ? `Améliorer (${fmt(cost)})` : `Recruter (${fmt(cost)})`;
+      btn.addEventListener('click', ()=>{
+        if(state.credits >= cost){ state.credits -= cost; h.level++; refreshFarm(); save(); }
+      });
+      row.appendChild(label); row.appendChild(btn); hl.appendChild(row);
     });
   }
 
