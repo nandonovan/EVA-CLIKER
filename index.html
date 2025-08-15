@@ -180,6 +180,10 @@
   function zoneCost(L){ return 150 * Math.pow(L, 1.35); }
   function clickBase(L){ return 1.0 * Math.pow(L, 0.9); }
   function upgradeCost(lvl){ return 50 * Math.pow(lvl, 1.15); }
+  function clickMultiplier(lvl){
+    const capped = Math.min(lvl, 500);
+    return Math.pow(1.013, capped - 1);
+  }
 
   // UI refresh (Farm)
   function refreshFarm(){
@@ -255,7 +259,7 @@
 
   // Game logic
   function addEnergy(){
-    const gain = (clickBase(state.zone) * (1 + state.clickLevel*0.15)) * state.prestigeMult;
+    const gain = (clickBase(state.zone) * clickMultiplier(state.clickLevel)) * state.prestigeMult;
     state.energy += gain;
     $('#energy').textContent = fmt(state.energy);
   }
